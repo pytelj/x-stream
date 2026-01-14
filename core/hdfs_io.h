@@ -3,17 +3,21 @@
 #define _HDFS_IO_
 //Use libhdfs3 by default
 //To use libhdfs, comment next line and modify the Makefile
-#define _LIB_HDFS_3_
+// #define _LIB_HDFS_3_
 #include <iostream>
 #include <map>
 #include <climits>
 #include <string>
-#ifdef _LIB_HDFS_3_
-#include <hdfs/hdfs.h>
-#else
-#include "/home/junzhao/hadoop/hadoop-2.5.2/include/hdfs.h"
+#ifdef XSTREAM_HDFS
+  #ifdef _LIB_HDFS_3_
+    #include <hdfs/hdfs.h>
+  #else
+    #include "/home/junzhao/hadoop/hadoop-2.5.2/include/hdfs.h"
+  #endif
 #endif
 #include <boost/thread/pthread/mutex.hpp>
+
+#ifdef XSTREAM_HDFS
 
 namespace x_lib{
     //Class hdfs_io is a singleton
@@ -265,4 +269,116 @@ namespace x_lib{
             }
     };
 }
+
+#else  // XSTREAM_HDFS not defined
+
+#include <fcntl.h>
+#include <unistd.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <cerrno>
+#include <cstring>
+#include <iostream>
+
+namespace x_lib {
+
+class hdfs_io {
+    hdfs_io() {}                    // keep singleton
+    hdfs_io(hdfs_io const&);
+    void operator=(hdfs_io const&);
+
+public:
+    static const int RDONLY = 1;
+    static const int WRONLY = 2;
+    static const int APPEND = 4;
+    static const int SYNC = 8;
+
+    static hdfs_io& get_instance() {
+        static hdfs_io inst;
+        return inst;
+    }
+
+    int open(const char* filename, int flags) {
+        int oflags = 0;
+
+        if (flags == RDONLY) oflags = O_RDONLY;
+        else if (flags == WRONLY) oflags = O_WRONLY | O_CREAT | O_TRUNC;
+        else if (flags == (WRONLY | RDONLY)) oflags = O_RDWR | O_CREAT;
+        else if (flags & APPEND) oflags = O_WRONLY | O_CREAT | O_APPEND;
+        else oflags = O_RDONLY;
+
+        int fd = ::open(filename, oflags, 0644);
+        if (fd < 0) {
+            std::cerr << "open(" << filename << ") failed: " << std::strerror(errno) << "\n";
+        }
+        return fd;
+    }
+
+    void turnOnRefreshWR(int /*fd*/) { /* no-op for local files */ }
+    void refreshReadHandle(int /*fd*/) { /* no-op */ }
+    void refreshWriteHandle(int /*fd*/) { /* no-op */ }
+
+    void flush(int fd) {
+        // best-effort flush
+        ::fsync(fd);
+    }
+
+    void close(int fd) {
+        ::close(fd);
+    }
+
+    void closeAll() {
+        // no global tracking in stub
+    }
+
+    int write(int fd, unsigned char* output, unsigned long bytes_to_write) {
+        ssize_t ret = ::write(fd, output, bytes_to_write);
+        if (ret < 0) {
+            std::cerr << "write failed: " << std::strerror(errno) << "\n";
+            return -1;
+        }
+        return (int)ret;
+    }
+
+    int read(int fd, unsigned char* input, unsigned long bytes_to_read) {
+        ssize_t ret = ::read(fd, input, bytes_to_read);
+        if (ret < 0) {
+            std::cerr << "read failed: " << std::strerror(errno) << "\n";
+            return -1;
+        }
+        return (int)ret;
+    }
+
+    int lseek(int fd, int offset) {
+        off_t ret = ::lseek(fd, offset, SEEK_SET);
+        if (ret == (off_t)-1) {
+            std::cerr << "lseek failed: " << std::strerror(errno) << "\n";
+            return -1;
+        }
+        return 0;
+    }
+
+    int ftruncate(int fd, int pos) {
+        int ret = ::ftruncate(fd, pos);
+        if (ret != 0) {
+            std::cerr << "ftruncate failed: " << std::strerror(errno) << "\n";
+            return -1;
+        }
+        return 0;
+    }
+
+    unsigned long getFileSize(int fd) {
+        struct stat st;
+        if (::fstat(fd, &st) != 0) {
+            std::cerr << "fstat failed: " << std::strerror(errno) << "\n";
+            return 0;
+        }
+        return (unsigned long)st.st_size;
+    }
+};
+
+} // namespace x_lib
+
+#endif // XSTREAM_HDFS
+
 #endif

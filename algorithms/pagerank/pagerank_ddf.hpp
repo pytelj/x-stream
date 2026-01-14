@@ -26,7 +26,7 @@ namespace algorithm {
     template <typename F>
     class pagerank_ddf {
     private:
-      static const weight_t propagation_threshold = 0.5;
+      static constexpr weight_t propagation_threshold = (weight_t)0.5;
       struct vertex {
 	vertex_t degree;
 	weight_t rank;
@@ -39,7 +39,7 @@ namespace algorithm {
 	weight_t rank;
       } __attribute__((__packed__));
 
-      static const weight_t DAMPING_FACTOR = 0.85;
+      static constexpr weight_t DAMPING_FACTOR = (weight_t)0.85;
       static unsigned long niters;
 
     public:

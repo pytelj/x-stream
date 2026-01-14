@@ -38,7 +38,7 @@ namespace algorithm {
 	weight_t rank;
       } __attribute__((__packed__));
 
-      static const weight_t DAMPING_FACTOR = 0.85;
+      static constexpr weight_t DAMPING_FACTOR = (weight_t)0.85;
       static unsigned long niters;
 
     public:
