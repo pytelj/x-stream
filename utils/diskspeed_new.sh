@@ -2,7 +2,7 @@
 set -euo pipefail
 
 OUT_DIR="${OUT_DIR:-results}"
-OUT="${OUT_DIR}/diskspeed-2.csv"
+OUT="${OUT_DIR}/diskspeed.csv"
 
 DIR="${DIR:-/tmp}"
 SIZE="${SIZE:-512M}" 
