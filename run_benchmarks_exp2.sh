@@ -22,6 +22,10 @@ for RUN_ID in "${RUN_IDS[@]}"; do
       cmd=$(printf "$tmpl" "$mem_bytes" "$mem_label" "$RUN_ID")
 
       echo "=== Sleeping ${SLEEP}s ==="
+
+      echo "=== Cleaning X-Stream temporary files ==="
+      sudo rm -f edges messages* unknown_edges updates* tree_edges vertices
+
       sleep "$SLEEP"
       echo "=== Running (run=${RUN_ID}, mem=${mem_label}): $cmd ==="
       eval "$cmd"
