@@ -5,6 +5,7 @@ object_files/
 _tmp
 logs/sys/
 notes.md
+graphs/
 
 test
 test.ini
